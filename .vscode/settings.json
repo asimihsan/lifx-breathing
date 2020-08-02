@@ -1,0 +1,12 @@
+{
+    "python.pythonPath": "/Users/asimi/.pyenv/versions/lifx-env/bin/python",
+    "python.linting.flake8Args": [
+        "--max-line-length=110"
+    ],
+    "python.formatting.provider": "black",
+    "python.linting.mypyEnabled": true,
+    "python.linting.mypyArgs": [],
+    "python.linting.flake8Enabled": false,
+    "python.linting.enabled": true,
+    "editor.formatOnSave": true
+}
