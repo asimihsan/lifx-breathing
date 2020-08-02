@@ -8,5 +8,14 @@
     "python.linting.mypyArgs": [],
     "python.linting.flake8Enabled": false,
     "python.linting.enabled": true,
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "python.formatting.blackArgs": [
+        "--line-length",
+        "110"
+    ],
+    "editor.quickSuggestions": {
+        "other": true,
+        "comments": false,
+        "strings": false
+    }
 }
