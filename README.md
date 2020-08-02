@@ -26,3 +26,8 @@ Then use poetry to install dependencies:
 ```
 poetry install
 ```
+
+## License
+
+`lifx-breathing` is distributed under the terms of the Apache License (Version 2.0). See [LICENSE](LICENSE) for
+details.
