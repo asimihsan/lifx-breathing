@@ -1,83 +1,182 @@
-from typing import Tuple
+from typing import Any, List, Tuple
+import logging
+import signal
 import time
+import types
+import sys
 
+import lifxlan
 from lifxlan import LifxLAN, Light, Device
+
+global_light: Light = None
+global_halt: bool = False
+
+# -----------------------------------------------------------------------------
+# create logger
+# -----------------------------------------------------------------------------
+logger = logging.getLogger("lifx_breathing")
+logger.setLevel(logging.DEBUG)
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
+# -----------------------------------------------------------------------------
 
 
 def go_to_color(
-    light: Light,
-    destination_color: Tuple[int, int, int, int],
-    duration: int,
-    flash_color: Tuple[int, int, int, int],
-    flash_duration: float,
-) -> None:
+    light: Light, destination_color: Tuple[int, int, int, int], duration_ms: int, flash_duration_ms: int,
+) -> int:
     is_transient: int = 0
     cycles: float = 0.5
     duty_cycle: int = 0
     waveform: int = 3
-    light.set_waveform(
-        is_transient,
-        destination_color,
-        duration,
-        cycles,
-        duty_cycle,
-        waveform,
-        rapid=True,
-    )
+    period_ms: int = duration_ms * 2 - flash_duration_ms
+
+    start: float = time.perf_counter()
+    light.set_waveform(is_transient, destination_color, period_ms, cycles, duty_cycle, waveform, rapid=False)
     while True:
-        current_color: Tuple[int, int, int, int] = light.get_color()
+        time.sleep(1e-1)
+        try:
+            current_color: Tuple[int, int, int, int] = light.get_color()
+        except lifxlan.errors.WorkflowException:
+            logger.warning("exception while getting color")
+            continue
         if current_color == destination_color:
             break
-        time.sleep(5e-2)
-    light.set_color(flash_color, rapid=True)
-    time.sleep(flash_duration)
-    light.set_color(destination_color, rapid=True)
+    light.set_power(False, rapid=False)
+    time.sleep(flash_duration_ms / 1000.0)
+    light.set_power(True, rapid=False)
+
+    end: float = time.perf_counter()
+    return int((end - start) * 1000)
 
 
-def main() -> None:
-    print("Getting light by name...")
-    lan = LifxLAN()
-    device: Device = lan.get_device_by_name("Office Lamp")
-    mac_address: str = device.get_mac_addr()
-    ip_address: str = device.get_ip_addr()
-    light = Light(mac_address, ip_address)
-
-    # print("Getting light directly...")
-    # mac_address: str = "D0:73:D5:5B:10:0D"
-    # ip_address: str = "192.168.1.59"
-    # light = Light(mac_address, ip_address)
-
+def run_breathing_cycle(light: Light) -> None:
     # Colors are HSBK: [hue (0-65535), saturation (0-65535), brightness (0-65535), Kelvin (2500-9000)]
     red: Tuple[int, int, int, int] = (0, 65535, 65535, 3500)
     blue: Tuple[int, int, int, int] = (36044, 65535, 65535, 3500)
-    green: Tuple[int, int, int, int] = (22937, 65535, 65535, 3500)
 
-    flash_duration: float = 1e-1
-    desired_breath: int = 5000
-    duration: int = desired_breath * 2 - int(flash_duration * 1000)
-    print(f"duration starts at {duration}")
+    target_inhale_duration_ms: int = 5000
+    target_exhale_duration_ms: int = 5000
+    flash_duration_ms: int = 200
 
-    for i in range(10):
-        start: float = time.perf_counter()
-        go_to_color(light, blue, duration, green, flash_duration)
-        first: float = time.perf_counter()
-        go_to_color(light, red, duration, green, flash_duration)
-        second: float = time.perf_counter()
-        delta1: float = first - start
-        delta2: float = second - first
-        print(f"delta1: {delta1:.2f}, delta2: {delta2:.2f}")
+    current_inhale_duration_ms: int = target_inhale_duration_ms
+    current_exhale_duration_ms: int = target_exhale_duration_ms
+    inhale_errors: List[int] = []
+    exhale_errors: List[int] = []
+    inhale_cumulative_error_ms: int = 0
+    exhale_cumulative_error_ms: int = 0
+    inhale_derivative_error_ms: int = 0
+    exhale_derivative_error_ms: int = 0
 
-        delta_avg: int = int(sum([delta1 * 1000, delta2 * 1000]) / 2.0)
-        if delta_avg > desired_breath:
-            duration -= 100
-        elif delta_avg < desired_breath:
-            duration += 100
-        print(f"duration is now {duration}")
+    light.set_color(blue, rapid=False)
+    cnt: int = 0
+    while True:
+        actual_inhale_duration_ms: int = go_to_color(
+            light, blue, current_inhale_duration_ms, flash_duration_ms
+        )
+        if global_halt:
+            return
+        actual_exhale_duration_ms: int = go_to_color(
+            light, red, current_exhale_duration_ms, flash_duration_ms
+        )
+        if global_halt:
+            return
+        logger.info(
+            f"actual_inhale_duration_ms: {actual_inhale_duration_ms}, actual_exhale_duration_ms: {actual_exhale_duration_ms}"
+        )
 
-    import ipdb
+        cnt += 1
+        if cnt <= 1:
+            logger.info("skip duration adjustment for first iteration")
+            continue
 
-    ipdb.set_trace()
-    pass
+        k_p: float = 1.0
+        k_i: float = 0.02
+        k_d: float = 0.05
+        history_window_size: int = 10
+
+        inhale_error_ms = target_inhale_duration_ms - actual_inhale_duration_ms
+        inhale_errors = (inhale_errors + [inhale_error_ms])[-history_window_size:]
+        inhale_cumulative_error_ms = sum(inhale_errors)
+        if len(inhale_errors) <= 1:
+            inhale_derivative_error_ms = 0
+        else:
+            inhale_derivative_error_ms = inhale_errors[-1] - inhale_errors[-2]
+        inhale_correction_ms: int = int(k_p * inhale_error_ms) + int(k_i * inhale_cumulative_error_ms) + int(
+            k_d * inhale_derivative_error_ms
+        )
+        logger.debug(
+            f"inhale_error_ms: {inhale_error_ms}, inhale_cumulative_error_ms: {inhale_cumulative_error_ms}, inhale_derivative_error_ms: {inhale_derivative_error_ms}"
+        )
+        current_inhale_duration_ms += inhale_correction_ms
+
+        exhale_error_ms = target_exhale_duration_ms - actual_exhale_duration_ms
+        exhale_errors = (exhale_errors + [exhale_error_ms])[-history_window_size:]
+        exhale_cumulative_error_ms = sum(exhale_errors)
+        if len(exhale_errors) <= 1:
+            exhale_derivative_error_ms = 0
+        else:
+            exhale_derivative_error_ms = exhale_errors[-1] - exhale_errors[-2]
+        exhale_correction_ms: int = int(k_p * exhale_error_ms) + int(k_i * exhale_cumulative_error_ms) + int(
+            k_d * exhale_derivative_error_ms
+        )
+        logger.debug(
+            f"exhale_error_ms: {exhale_error_ms}, exhale_cumulative_error_ms: {exhale_cumulative_error_ms}, exhale_derivative_error_ms: {exhale_derivative_error_ms}"
+        )
+        current_exhale_duration_ms += exhale_correction_ms
+
+        logger.info(
+            f"current_inhale_duration_ms is now {current_inhale_duration_ms}, current_exhale_duration_ms is now {current_exhale_duration_ms}"
+        )
+
+
+def handler(signum: int, frame: types.FrameType) -> None:
+    global global_light
+    global global_halt
+
+    logger.info("signal handler")
+    if global_light is None:
+        return
+    logger.info("signal handler turning off light")
+    global_light.set_power(False, rapid=True)
+    logger.info("signal handler setting global halt flag")
+    global_halt = True
+
+
+def main() -> None:
+    logger.info("Getting light by name...")
+    lan: LifxLAN = LifxLAN()
+    device: Device = lan.get_device_by_name("Office Lamp")
+    mac_address: str = device.get_mac_addr()
+    ip_address: str = device.get_ip_addr()
+    light: Light = Light(mac_address, ip_address)
+
+    # logger.info("Getting light directly...")
+    # mac_address: str = "D0:73:D5:5B:10:0D"
+    # ip_address: str = "192.168.1.59"
+    # light: Light = Light(mac_address, ip_address)
+
+    global global_light
+    global_light = light
+    signal.signal(signal.SIGTERM, handler)
+
+    try:
+        run_breathing_cycle(light)
+    except:
+        logger.exception("exception in main")
+        raise
+    finally:
+        light.set_power(False, rapid=True)
 
 
 if __name__ == "__main__":
