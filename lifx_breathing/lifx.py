@@ -1,9 +1,11 @@
+from dataclasses import dataclass
 from typing import Any, List, Tuple
+import argparse
 import logging
 import signal
+import sys
 import time
 import types
-import sys
 
 import lifxlan
 from lifxlan import LifxLAN, Light, Device
@@ -30,6 +32,10 @@ ch.setFormatter(formatter)
 # add ch to logger
 logger.addHandler(ch)
 # -----------------------------------------------------------------------------
+
+
+class LifxDeviceNotFoundException(Exception):
+    pass
 
 
 def go_to_color(
@@ -60,13 +66,13 @@ def go_to_color(
     return int((end - start) * 1000)
 
 
-def run_breathing_cycle(light: Light) -> None:
+def run_breathing_cycle(light: Light, inhale_duration_ms: int, exhale_duration_ms: int) -> None:
     # Colors are HSBK: [hue (0-65535), saturation (0-65535), brightness (0-65535), Kelvin (2500-9000)]
     red: Tuple[int, int, int, int] = (0, 65535, 65535, 3500)
     blue: Tuple[int, int, int, int] = (36044, 65535, 65535, 3500)
 
-    target_inhale_duration_ms: int = 5000
-    target_exhale_duration_ms: int = 5000
+    target_inhale_duration_ms: int = inhale_duration_ms
+    target_exhale_duration_ms: int = exhale_duration_ms
     flash_duration_ms: int = 200
 
     current_inhale_duration_ms: int = target_inhale_duration_ms
@@ -101,8 +107,8 @@ def run_breathing_cycle(light: Light) -> None:
             continue
 
         k_p: float = 1.0
-        k_i: float = 0.02
-        k_d: float = 0.05
+        k_i: float = 0.05
+        k_d: float = 0.03
         history_window_size: int = 10
 
         inhale_error_ms = target_inhale_duration_ms - actual_inhale_duration_ms
@@ -153,25 +159,43 @@ def handler(signum: int, frame: types.FrameType) -> None:
     global_halt = True
 
 
+@dataclass
+class ProgramArguments:
+    device_name: str
+    inhale_duration_ms: int
+    exhale_duration_ms: int
+
+
+def get_args() -> ProgramArguments:
+    parser = argparse.ArgumentParser(description="Run LIFX breathing process.")
+    parser.add_argument("--device-name", help="Name of LIFX device", required=True)
+    parser.add_argument("--inhale-duration-ms", type=int, help="Inhale duration milliseconds", required=True)
+    parser.add_argument("--exhale-duration-ms", type=int, help="Exhale duration milliseconds", required=True)
+    args: argparse.Namespace = parser.parse_args()
+    return ProgramArguments(
+        device_name=args.device_name,
+        inhale_duration_ms=args.inhale_duration_ms,
+        exhale_duration_ms=args.exhale_duration_ms,
+    )
+
+
 def main() -> None:
-    logger.info("Getting light by name...")
+    args: ProgramArguments = get_args()
+    logger.info(f"Getting light by name '{args.device_name}'...")
     lan: LifxLAN = LifxLAN()
-    device: Device = lan.get_device_by_name("Office Lamp")
+    device: Device = lan.get_device_by_name(args.device_name)
+    if device is None:
+        raise LifxDeviceNotFoundException()
     mac_address: str = device.get_mac_addr()
     ip_address: str = device.get_ip_addr()
     light: Light = Light(mac_address, ip_address)
-
-    # logger.info("Getting light directly...")
-    # mac_address: str = "D0:73:D5:5B:10:0D"
-    # ip_address: str = "192.168.1.59"
-    # light: Light = Light(mac_address, ip_address)
 
     global global_light
     global_light = light
     signal.signal(signal.SIGTERM, handler)
 
     try:
-        run_breathing_cycle(light)
+        run_breathing_cycle(light, args.inhale_duration_ms, args.exhale_duration_ms)
     except:
         logger.exception("exception in main")
         raise
