@@ -216,18 +216,6 @@ i18n = ["Babel (>=0.8)"]
 
 [[package]]
 category = "main"
-description = "API for local communication with LIFX devices over a LAN."
-name = "lifxlan"
-optional = false
-python-versions = "*"
-version = "1.2.5"
-
-[package.dependencies]
-bitstring = "*"
-netifaces = "*"
-
-[[package]]
-category = "main"
 description = "Safely add untrusted strings to HTML/XML markup."
 name = "markupsafe"
 optional = false
@@ -504,9 +492,6 @@ jedi = [
 jinja2 = [
     {file = "Jinja2-2.11.2-py2.py3-none-any.whl", hash = "sha256:f0a4641d3cf955324a89c04f3d94663aa4d638abe8f733ecd3582848e1c37035"},
     {file = "Jinja2-2.11.2.tar.gz", hash = "sha256:89aab215427ef59c34ad58735269eb58b1a5808103067f7bb9d5836c651b3bb0"},
-]
-lifxlan = [
-    {file = "lifxlan-1.2.5.tar.gz", hash = "sha256:5e7bfe4f8cdeac03edb2f118f617adb019449e08bc7193b441f8b4d8be8e66d8"},
 ]
 markupsafe = [
     {file = "MarkupSafe-1.1.1-cp27-cp27m-macosx_10_6_intel.whl", hash = "sha256:09027a7803a62ca78792ad89403b1b7a73a01c8cb65909cd876f7fcebd79b161"},
