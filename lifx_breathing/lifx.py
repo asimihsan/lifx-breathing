@@ -84,7 +84,7 @@ def run_breathing_cycle(light: Light, inhale_duration_ms: int, exhale_duration_m
     inhale_derivative_error_ms: int = 0
     exhale_derivative_error_ms: int = 0
 
-    light.set_color(blue, rapid=False)
+    light.set_color(red, rapid=False)
     cnt: int = 0
     while True:
         actual_inhale_duration_ms: int = go_to_color(
@@ -153,8 +153,6 @@ def handler(signum: int, frame: types.FrameType) -> None:
     logger.info("signal handler")
     if global_light is None:
         return
-    logger.info("signal handler turning off light")
-    global_light.set_power(False, rapid=True)
     logger.info("signal handler setting global halt flag")
     global_halt = True
 
@@ -194,13 +192,15 @@ def main() -> None:
     global_light = light
     signal.signal(signal.SIGTERM, handler)
 
+    original_color: Tuple[int, int, int, int] = light.get_color()
+
     try:
         run_breathing_cycle(light, args.inhale_duration_ms, args.exhale_duration_ms)
     except:
         logger.exception("exception in main")
         raise
     finally:
-        light.set_power(False, rapid=True)
+        light.set_color(original_color, rapid=True)
 
 
 if __name__ == "__main__":
