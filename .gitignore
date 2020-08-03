@@ -1,2 +1,3 @@
 .mypy_cache
 lifx-breathing.code-workspace
+lifx_breathing.egg-info/

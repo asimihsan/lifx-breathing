@@ -8,11 +8,11 @@ Install pyenv and pyenv-virtualhelper and put them into your shell RC
 brew install pyenv pyenv-virtualenv
 ```
 
-Install miniconda3 and a virtualenv:
+Install the latest version of Python 3 and a virtualenv:
 
 ```
-pyenv install miniconda3-latest
-pyenv virtualenv miniconda3-latest lifx-env
+pyenv install 3.8.5
+pyenv virtualenv 3.8.5 lifx-env
 ```
 
 Change directory into Git clone, then first install poetry and lifxlan (not sure why but poetry can't install lifxlan)
