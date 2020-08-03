@@ -1,1 +1,2 @@
 poetry
+git+git://github.com/mclarkk/lifxlan.git@ba51118b691a8b52fee9ccd098145065b79385b1
