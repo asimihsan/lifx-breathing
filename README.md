@@ -15,9 +15,12 @@ pyenv install 3.8.5
 pyenv virtualenv 3.8.5 lifx-env
 ```
 
-Change directory into Git clone, then first install poetry and lifxlan (not sure why but poetry can't install lifxlan)
+Change directory into Git clone, this should automatically switch virtualenv to `lifx-env`.
+
+Then first install prerequisites and poetry.
 
 ```
+pip install --upgrade pip wheel
 pip install -r requirements.txt
 ```
 
