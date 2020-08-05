@@ -50,6 +50,8 @@ def go_to_color(
     start: float = time.perf_counter()
     light.set_waveform(is_transient, destination_color, period_ms, cycles, duty_cycle, waveform, rapid=False)
     while True:
+        if global_halt:
+            return 0
         time.sleep(1e-1)
         try:
             current_color: Tuple[int, int, int, int] = light.get_color()
