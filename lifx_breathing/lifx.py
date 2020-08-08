@@ -161,19 +161,22 @@ def handler(signum: int, frame: types.FrameType) -> None:
 
 @dataclass
 class ProgramArguments:
-    device_name: str
+    ip_address: str
+    mac_address: str
     inhale_duration_ms: int
     exhale_duration_ms: int
 
 
 def get_args() -> ProgramArguments:
     parser = argparse.ArgumentParser(description="Run LIFX breathing process.")
-    parser.add_argument("--device-name", help="Name of LIFX device", required=True)
+    parser.add_argument("--ip-address", help="IP address of LIFX device", required=True)
+    parser.add_argument("--mac-address", help="MAC address of LIFX device", required=True)
     parser.add_argument("--inhale-duration-ms", type=int, help="Inhale duration milliseconds", required=True)
     parser.add_argument("--exhale-duration-ms", type=int, help="Exhale duration milliseconds", required=True)
     args: argparse.Namespace = parser.parse_args()
     return ProgramArguments(
-        device_name=args.device_name,
+        ip_address=args.ip_address,
+        mac_address=args.mac_address,
         inhale_duration_ms=args.inhale_duration_ms,
         exhale_duration_ms=args.exhale_duration_ms,
     )
@@ -181,14 +184,8 @@ def get_args() -> ProgramArguments:
 
 def main() -> None:
     args: ProgramArguments = get_args()
-    logger.info(f"Getting light by name '{args.device_name}'...")
-    lan: LifxLAN = LifxLAN()
-    device: Device = lan.get_device_by_name(args.device_name)
-    if device is None:
-        raise LifxDeviceNotFoundException()
-    mac_address: str = device.get_mac_addr()
-    ip_address: str = device.get_ip_addr()
-    light: Light = Light(mac_address, ip_address)
+    logger.info(f"Getting light...")
+    light: Light = Light(args.mac_address, args.ip_address)
 
     global global_light
     global_light = light
