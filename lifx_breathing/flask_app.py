@@ -54,7 +54,7 @@ first_load: bool = True
 
 from flask import Flask, render_template, redirect, url_for
 from flask_wtf import FlaskForm
-from wtforms import HiddenField
+from wtforms import HiddenField, TextField
 from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
@@ -73,6 +73,8 @@ class LightNotFoundError(Exception):
 class StartLightForm(FlaskForm):
     location = HiddenField("location")
     label = HiddenField("label")
+    inhale_seconds = TextField("Inhale (seconds): ", default="5")
+    exhale_seconds = TextField("Exhale (seconds): ", default="5")
 
 
 class StopLightForm(FlaskForm):
@@ -133,10 +135,21 @@ def start_light() -> Any:
     data: Dict[str, str] = start_light_form.data
     location: str = data["location"]
     label: str = data["label"]
+
+    inhale_seconds_ms: int = 5000
+    inhale_seconds_input: str = data["inhale_seconds"]
+    if inhale_seconds_input.isdigit():
+        inhale_seconds_ms = max(int(inhale_seconds_input) * 1000, 1000)
+
+    exhale_seconds_ms: int = 5000
+    exhale_seconds_input: str = data["exhale_seconds"]
+    if exhale_seconds_input.isdigit():
+        exhale_seconds_ms = max(int(exhale_seconds_input) * 1000, 1000)
+
     light: Optional[LifxLightWrapper] = manager.get_light(location, label)
     if light is None:
         raise LightNotFoundError
-    start_process(light)
+    start_process(light, inhale_seconds_ms, exhale_seconds_ms)
     return redirect(url_for("index"))
 
 
@@ -153,7 +166,7 @@ def stop_light() -> Any:
     return redirect(url_for("index"))
 
 
-def start_process(light: LifxLightWrapper) -> None:
+def start_process(light: LifxLightWrapper, inhale_seconds_ms: int, exhale_seconds_ms: int) -> None:
     global processes
     if light in processes:
         stop_process(light)
@@ -166,9 +179,9 @@ def start_process(light: LifxLightWrapper) -> None:
         "--mac-address",
         light.mac_address,
         "--inhale-duration-ms",
-        "5000",
+        str(inhale_seconds_ms),
         "--exhale-duration-ms",
-        "5000",
+        str(exhale_seconds_ms),
     ]
     process = subprocess.Popen(command)
     processes[light] = process
