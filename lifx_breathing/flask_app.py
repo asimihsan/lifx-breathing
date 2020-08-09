@@ -7,6 +7,9 @@ FLASK_APP=lifx_breathing/flask_app.py FLASK_ENV=development FLASK_SECRET_KEY=sec
 
 ### Production running
 
+cd /Users/asimi/Dropbox/Private/Programming/lifx-breathing
+mkdir -p /tmp/lifx_breathing_logs/
+FLASK_SECRET_KEY=secret_key supervisord --configuration supervisord.conf --nodaemon
 
 """
 
@@ -174,13 +177,14 @@ def start_process(light: LifxLightWrapper) -> None:
 def stop_process(light: LifxLightWrapper) -> None:
     global processes
     process: subprocess.Popen[Any] = processes[light]
-    process.terminate()
-    start: float = time.perf_counter()
-    while process.poll() is None:
-        time.sleep(0.1)
-        if time.perf_counter() - start > 5.0:
-            process.kill()
-            break
+    if process.poll() is None:
+        process.terminate()
+        start: float = time.perf_counter()
+        while process.poll() is None:
+            time.sleep(0.1)
+            if time.perf_counter() - start > 5.0:
+                process.kill()
+                break
     del processes[light]
 
 
