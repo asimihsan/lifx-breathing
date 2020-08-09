@@ -1,0 +1,13 @@
+[Unit]
+Description=LIFX breathing web app
+After=networking.service
+Conflicts=shutdown.target reboot.target halt.target
+
+[Service]
+ExecStart=/home/pi/.pyenv/shims/supervisord --configuration supervisord.conf --nodaemon
+WorkingDirectory=/home/pi/Programming/lifx-breathing
+Environment="FLASK_SECRET_KEY=secret_key"
+TimeoutSec=60
+
+[Install]
+WantedBy=default.target

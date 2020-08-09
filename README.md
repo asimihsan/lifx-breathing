@@ -42,14 +42,26 @@ pyenv rehash
 FLASK_APP=lifx_breathing/flask_app.py FLASK_ENV=development FLASK_SECRET_KEY=secret_key flask run
 ```
 
-### Production running
+### Production running with supervisord
 
 ```
 mkdir -p /tmp/lifx_breathing_logs/
-FLASK_SECRET_KEY=secret_key supervisord --configuration supervisord.conf --nodaemon
+FLASK_SECRET_KEY=secret_key supervisord --configuration supervisord.conf
 ```
 
 or skip `--nodaemon` if you want to run this in the background.
+
+### Setting up systemd service
+
+```
+mkdir -p /tmp/lifx_breathing_logs/
+mkdir -p ~/.config/systemd/user/
+cp lifx-breathing.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user status lifx-breathing.service
+systemctl --user start lifx-breathing.service
+systemctl --user enable lifx-breathing.service
+```
 
 ## License
 
