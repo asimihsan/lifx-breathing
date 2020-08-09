@@ -192,6 +192,7 @@ def main() -> None:
     signal.signal(signal.SIGTERM, handler)
 
     original_color: Tuple[int, int, int, int] = light.get_color()
+    original_power: int = light.get_power()
 
     try:
         run_breathing_cycle(light, args.inhale_duration_ms, args.exhale_duration_ms)
@@ -199,7 +200,8 @@ def main() -> None:
         logger.exception("exception in main")
         raise
     finally:
-        light.set_color(original_color, rapid=True)
+        light.set_color(original_color, rapid=False)
+        light.set_power(original_power, rapid=False)
 
 
 if __name__ == "__main__":
