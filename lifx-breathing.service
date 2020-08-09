@@ -4,6 +4,7 @@ After=networking.service
 Conflicts=shutdown.target reboot.target halt.target
 
 [Service]
+ExecStartPre=/bin/mkdir -p /tmp/lifx_breathing_logs/
 ExecStart=/home/pi/.pyenv/shims/supervisord --configuration supervisord.conf --nodaemon
 WorkingDirectory=/home/pi/Programming/lifx-breathing
 Environment="FLASK_SECRET_KEY=secret_key"
