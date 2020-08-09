@@ -36,6 +36,21 @@ Since there will be new executables present make them available:
 pyenv rehash
 ```
 
+### Development running
+
+```
+FLASK_APP=lifx_breathing/flask_app.py FLASK_ENV=development FLASK_SECRET_KEY=secret_key flask run
+```
+
+### Production running
+
+```
+mkdir -p /tmp/lifx_breathing_logs/
+FLASK_SECRET_KEY=secret_key supervisord --configuration supervisord.conf --nodaemon
+```
+
+or skip `--nodaemon` if you want to run this in the background.
+
 ## License
 
 `lifx-breathing` is distributed under the terms of the Apache License (Version 2.0). See [LICENSE](LICENSE) for
