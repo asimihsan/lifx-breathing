@@ -25,54 +25,70 @@
 
 <body>
   <div class="container">
-    <h1>LIFX Bulb Manager</h1>
+    <div class="row">
+      <h1>LIFX Bulb Manager</h1>
+    </div>
+
+    <div class="row">
+      <ul>
+        <li>Good default: inhale 5 seconds, exhale 5 seconds</li>
+        <li>More relaxing: inhale 4 seconds, exhale 6 seconds</li>
+        <li>More active: inhale 6 seconds, exhale 4 seconds</li>
+      </ul>
+    </div>
+
+    <div class="row">
+      <form method="POST" action="{{ url_for('update_lights') }}">
+        {{ update_lights_form.csrf_token }}
+        <input class="btn btn-primary" type="submit" name="update_lights" value="Update lights" />
+      </form>
+    </div>
+
     {% if lights_and_forms %}
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">Location</th>
-          <th scope="col">Label</th>
-          <th scope="col">Start</th>
-          <th scope="col">Stop</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for light_and_forms in lights_and_forms %}
-        <tr>
-          <td>{{ light_and_forms.light.location }}</td>
-          <td>{{ light_and_forms.light.label }}</td>
-          <td>
-            <form method="POST" action="{{ url_for('start_light') }}">
-              {{ light_and_forms.start_form.hidden_tag() }}
-              {% if light_and_forms.is_running %}
-              <input class="btn btn-secondary" type="submit" name="start_light" value="Start light" disabled />
-              {% else %}
-              <input class="btn btn-success" type="submit" name="start_light" value="Start light" />
-              {% endif %}
-            </form>
-          </td>
-          <td>
-            <form method="POST" action="{{ url_for('stop_light') }}">
-              {{ light_and_forms.stop_form.hidden_tag() }}
-              {% if light_and_forms.is_running %}
-              <input class="btn btn-danger" type="submit" name="stop_light" value="Stop light" />
-              {% else %}
-              <input class="btn btn-secondary" type="submit" name="stop_light" value="Stop light" disabled />
-              {% endif %}
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    {% for light_and_forms in lights_and_forms %}
+    <hr />
+    <div class="row">
+      <div class="col">
+        <h2>{{ light_and_forms.light.location }} - {{ light_and_forms.light.label }}</h2>
+      </div>
+      <div class="col">
+        <form method="POST" action="{{ url_for('start_light') }}">
+          {{ light_and_forms.start_form.hidden_tag() }}
+
+          {% if not light_and_forms.is_running %}
+          <div class="form-group">
+            <label for="inhale">{{ light_and_forms.start_form.inhale_seconds.label }}</label>
+            {{ light_and_forms.start_form.inhale_seconds }}
+          </div>
+          <div class="form-group">
+            <label for="exhale">{{ light_and_forms.start_form.exhale_seconds.label }}</label>
+            {{ light_and_forms.start_form.exhale_seconds }}
+          </div>
+          {% endif %}
+          {% if light_and_forms.is_running %}
+          <input class="btn btn-secondary" type="submit" name="start_light" value="Start light" disabled />
+          {% else %}
+          <input class="btn btn-success" type="submit" name="start_light" value="Start light" />
+          {% endif %}
+        </form>
+
+        <form method="POST" action="{{ url_for('stop_light') }}">
+          {{ light_and_forms.stop_form.hidden_tag() }}
+          {% if light_and_forms.is_running %}
+          <input class="btn btn-danger" type="submit" name="stop_light" value="Stop light" />
+          {% else %}
+          <input class="btn btn-secondary" type="submit" name="stop_light" value="Stop light" disabled />
+          {% endif %}
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+    <hr />
+
     {% else %}
     <p>No lights detected.</p>
     {% endif %}
 
-    <form method="POST" action="{{ url_for('update_lights') }}">
-      {{ update_lights_form.csrf_token }}
-      <input class="btn btn-primary" type="submit" name="update_lights" value="Update lights" />
-    </form>
   </div>
 
   <script src="/static/js/vendor/modernizr-3.11.2.min.js"></script>
