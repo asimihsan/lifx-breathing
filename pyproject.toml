@@ -15,7 +15,7 @@ flask_wtf = "^0.14.3"
 black = "^19.10b0"
 mypy = "^0.782"
 flake8 = "^3.8.3"
-ipython = "^7.17.0"
+ipython = "^8.10.0"
 ipdb = "^0.13.3"
 rope = "^0.17.0"
 
